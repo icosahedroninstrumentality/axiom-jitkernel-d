@@ -1,0 +1,22 @@
+{
+	"authors": [
+		"Icosahedron Instrumentality <icosahedroninstrumentality@proton.me>"
+	],
+	"versions": [
+		"GL_33"
+	],
+	"mainSourceFile": "source/axiom.jitkernel.d",
+	"license": "ISC",
+	"copyright": "Copyright © 2026, Icosahedron Instrumentality <icosahedroninstrumentality@proton.me>",
+	"name": "jitkernel",
+	"libs": ["opengl", "glfw"],
+	"description": "JITKernel graphics foundation for D applications.",
+	"dependencies": {
+		"bindbc-opengl": "~>1.1.1",
+		"glfw-d": "~>1.1.2"
+	},
+	"dflags-ldc": ["-L-Wl,--no-as-needed"],
+	"systemDependencies": "Requires installed libraries with headers for `opengl` 3.3 core or higher and `glfw`.",
+	"buildRequirements": ["allowWarnings", "disallowDeprecations"],
+	"targetType": "library"
+}

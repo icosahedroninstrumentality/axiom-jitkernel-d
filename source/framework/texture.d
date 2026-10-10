@@ -1,0 +1,154 @@
+module framework.texture;
+
+import framework.opengl;
+import framework.vector;
+import bindbc.opengl;
+import std.string;
+
+public GLuint fb;
+
+public class Texture {
+	public __gshared Texture raw = null;
+	public __gshared Texture screen;
+	public __gshared Texture temp;
+
+	public __gshared bool floatRenderable;
+	public __gshared GLuint internalFormat;
+	public __gshared GLuint pixelType;
+
+	public Vector4 rect;
+	public Vector2 size;
+	public GLuint id;
+
+	this (Vector2 size_) {
+		size = size_;
+		rect = Vector4(Radian.zero, Radian.zero, size.x, size.y);
+		glGenTextures(1, &id);
+		glBindTexture(GL_TEXTURE_2D, id);
+		glTexImage2D(
+			GL_TEXTURE_2D, 0, internalFormat,
+			cast (GLsizei) size.x.raw,
+			cast (GLsizei) size.y.raw,
+			0, GL_RGBA, pixelType, null
+		);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+		//GLfloat maxAniso;
+		//glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAniso);
+		//if (supportedExtension("EXT_texture_filter_anisotropic")) glTexParameterf(GL_TEXTURE_2D, GL_MAX_TEXTURE_MAX_ANISOTROPY, maxAniso);
+		clear();
+	}
+
+	public void use () {
+		glBindFramebuffer(GL_FRAMEBUFFER, fb);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, id, 0);
+	}
+	
+	public void fill (Vector4 color) {
+		use();
+		glDisable(GL_SCISSOR_TEST);
+		glViewport(0, 0, cast (GLsizei) size.x.raw, cast (GLsizei) size.y.raw);
+		glClearColor(
+			cast (GLclampf) color.x.raw,
+			cast (GLclampf) color.y.raw,
+			cast (GLclampf) color.z.raw,
+			cast (GLclampf) color.w.raw,
+		);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+
+	public void clear () {
+		fill(Vector4(Radian.zero, Radian.zero, Radian.zero, Radian.one));
+	}
+
+	import std.path : extension;
+
+	public static Texture loadFile(string fileName) {
+		int width, height;
+		ubyte[] pixels;
+		auto ext = extension(fileName).toLower();
+
+
+		if (!pixels.length || width <= 0 || height <= 0)
+			throw new Error("Failed to load texture file: " ~ fileName);
+
+		// Create and upload texture (same as before)
+		Texture texture = new Texture(Vector2(Radian(width), Radian(height)));
+		glBindTexture(GL_TEXTURE_2D, texture.id);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
+					 cast(GLsizei)width, cast(GLsizei)height,
+					 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.ptr);
+		// For HEIC, the array is managed by GC; no extra free needed
+		return texture;
+	}
+	
+	public static void clearRaw (Vector4 color = Vector4(Radian.zero, Radian.zero, Radian.zero, Radian.one)) {
+		glDisable(GL_SCISSOR_TEST);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, cast (GLsizei) Texture.screen.size.x.raw, cast (GLsizei) Texture.screen.size.y.raw);
+		glClearColor(
+			cast (GLclampf) color.x.raw,
+			cast (GLclampf) color.y.raw,
+			cast (GLclampf) color.z.raw,
+			cast (GLclampf) color.w.raw,
+		);
+		glClear(GL_COLOR_BUFFER_BIT);
+		//glDrawArrays(GL_TRIANGLES, 0, 6);
+	}
+}
+
+public class WTexture {
+	Texture tex;
+	ulong cellSize = 0;
+	ulong cellCount = 0;
+	VTexture[] cells;
+	ulong rotatingPointer; // keep track of last assigned cell
+
+	this (ulong size) {
+		cellSize = size;
+		ulong mult = (size >= 1024) ? 2 : 1024 / size;
+		cellCount = mult * mult;
+		tex = new Texture(Vector2(Radian(mult * size), Radian(mult * size)));
+		cells = new VTexture[cellCount];
+	}
+}
+
+public @property ulong ceilPow2(ulong v) @safe pure nothrow @nogc {
+	ulong n = max(v, 1) - 1;
+	n |= n >> 1;
+	n |= n >> 2;
+	n |= n >> 4;
+	n |= n >> 8;
+	n |= n >> 16;
+	n |= n >> 32;
+	return n + 1;
+}
+
+public class VTexture {
+	private __gshared WTexture[ulong] wts;
+
+	public bool cached = true;
+	public WTexture parent = null;
+	public Vector4 rect;
+
+	this (Vector2 size_) {
+		if (size_ == Vector2(Radian(0), Radian(0))) {
+			rect = Vector4(Radian(0), Radian(0), Radian(0), Radian(0));
+		} else {
+			ulong size = (cast(ulong)(size_.x.max(size_.y).max(Radian(16)).ceil)).ceilPow2;
+			if (size !in wts) wts[size] = new WTexture(size);
+			ulong i = (wts[size].rotatingPointer + 1) % wts[size].cellCount;
+			if (wts[size].cells[i] !is null) wts[size].cells[i].cached = false;
+			rect = Vector4(
+				Radian((i % wts[size].cellCount) * size),
+				Radian((i / wts[size].cellCount) * size),
+				size_.x,
+				size_.y,
+			);
+			wts[size].cells[i] = this;
+			wts[size].rotatingPointer = i;
+		}
+	}
+}

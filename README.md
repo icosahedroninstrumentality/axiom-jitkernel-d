@@ -8,4 +8,4 @@ Please help us develop this via donatin at Ko-fi!
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/icosahedroninstrumentality)
 
-You can talk to us [at Telegram](https://t.me/icosahedroninstrumentality)!
+You can talk to us [at Telegram](https://t.me/icosahedroninstrumentality) or [via email](mailto:icosahedroninstrumentality@proton.me)!

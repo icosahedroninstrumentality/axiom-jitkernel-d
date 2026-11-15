@@ -1,4 +1,4 @@
-module framework.vector;
+module jitkernel.vector;
 
 public import std.math;
 public import std.algorithm;
@@ -424,11 +424,4 @@ public struct Vector4 {
 			w * rhs.w - i * rhs.i - j * rhs.j - k * rhs.k
 		);
 	}
-}
-
-public struct CubicBezier {
-	Vector2 p0;
-	Vector2 p1;
-	Vector2 p2;
-	Vector2 p3;
 }

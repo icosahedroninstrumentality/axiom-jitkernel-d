@@ -1,10 +1,9 @@
-module framework.color;
+module jitkernel.color;
 
-import framework.opengl;
-import framework.vector;
+import jitkernel.opengl;
+import jitkernel.vector;
 
 public alias RGBA = Vector4;
-public alias Color = Vector4;
 
 public @property RGBA opaque (RGBA c) {
 	return RGBA(c.x, c.y, c.z, Radian.one);

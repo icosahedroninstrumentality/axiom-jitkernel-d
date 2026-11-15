@@ -1,11 +1,9 @@
-module framework.opengl;
+module jitkernel.opengl;
 
-import framework.prototypes;
-import framework.vector;
-import framework.color;
-import framework.texture;
+import jitkernel.vector;
+import jitkernel.color;
+import jitkernel.texture;
 import bindbc.opengl;
-import std.stdio;
 
 public class Uniform (T) {
 	public string name;

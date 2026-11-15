@@ -1,8 +1,8 @@
-module framework.jitkernel;
+module jitkernel.core;
 
-import framework.opengl;
-import framework.texture;
-import framework.vector;
+import jitkernel.opengl;
+import jitkernel.texture;
+import jitkernel.vector;
 import bindbc.opengl;
 
 import std.conv : to;
@@ -99,9 +99,8 @@ private mixin template KernelExpressions () {
 	}
 }
 
-public class KernelParameter (T) : KernelStored!T {
-	alias ElementType = T;
-	public Uniform!T uniform;
+public class KernelParameter (K) : KernelStored!K {
+	public Uniform!K uniform;
 
 	this (Kernel _kernel = null, string _name = "", ulong _arrayLength = 1) {
 		super(_kernel, _name, _arrayLength);
@@ -111,7 +110,7 @@ public class KernelParameter (T) : KernelStored!T {
 		super(_kernel, _name, _arrayLength);
 	}
 
-	void set (T t) { uniform.set(t); }
+	void set (K t) { uniform.set(t); }
 }
 
 private enum isKernelExpression(E) = is(typeof(E) : KernelStored!(E.ElementType));
@@ -172,17 +171,23 @@ public class Kernel {
 	public KernelStored!Vector4 coord;
 	public KernelStored!Vector2 uv;
 	
-	public KernelStored!Radian E;
-	public KernelStored!Radian PI;
-	public KernelStored!Radian EPS;
+	public KernelStored!Radian e;
+	public KernelStored!Radian pi;
+	public KernelStored!Radian epsilon;
+	public KernelStored!Radian zero;
+	public KernelStored!Radian one;
+	public KernelStored!Radian two;
 	
 	public this () {
 		coord = new KernelStored!Vector4(this, "gl_FragCoord");
 		uv = new KernelStored!Vector2(this, "uv");
 		import std.math;
-		PI = literal(Radian(std.math.PI));
-		EPS = literal(Radian.zero.epsilon);
-		E = literal(Radian(std.math.E));
+		pi = literal(Radian(std.math.PI));
+		epsilon = literal(Radian.zero.epsilon);
+		e = literal(Radian(std.math.E));
+		zero = literal(Radian.zero);
+		one = literal(Radian.one);
+		two = literal(Radian.two);
 	}
 	public static Kernel create () { return new Kernel(); }
 	public this (void delegate (Kernel) setup) { this(); setup(this); }
@@ -203,6 +208,12 @@ public class Kernel {
 		lateUniformUpdate[ku.uniform.name] = (GLint i) { ku.uniform.location = i; };
 		upload[ku.uniform.name] = (int* i) => ku.uniform.upload(i);
 		return ku;
+	}
+
+	public KernelStored!T link (T) (ref T data) {
+		KernelParameter!T u = uniform!T();
+		prehook((Kernel k) {u.set(data);});
+		return u;
 	}
 
 	public KernelStored!int define (int value) {
@@ -335,3 +346,23 @@ public KernelStored!Vector2 translateUV (Kernel k, KernelStored!Vector4 source, 
 		/ target.component!"zw"
 	);
 }
+
+/*
+public template Effect (T, void delegate (Kernel, KernelParameter!T) handler) {
+	public class Effect {
+		import core.sync.mutex;
+		public __gshared Mutex mut = new Mutex();
+		public __gshared KernelParameter!T payload;
+		public __gshared kernel = new Kernel((Kernel k) {handler(k, payload);});
+		public static void draw (Texture target, Vector4 rect, T data) {
+			synchronized (mut) {
+				payload.set(data);
+				kernel.draw(target, rect);
+			}
+		}
+	}
+}
+
+alias UV = Effect!(Radian, (Kernel k, KernelParameter!Radian p) {});
+
+*/

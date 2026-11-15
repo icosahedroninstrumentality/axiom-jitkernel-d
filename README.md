@@ -1,5 +1,7 @@
 # axiom:jitkernel-d
 
+### **THIS REPOSITORY HAS BEEN MOVED HERE: [https://github.com/icosahedroninstrumentality/jitkernel]**
+
 JITKernel is a portable dynamic shader platform written primarily for D.
 
 JITKernel is a subproject of Project Axiom and is the shader platform for the Bimsuth Graphics Service and the Bismuth Application Client. It enables the dynamic generation and declaration of shader code within the CPU-side application language.
